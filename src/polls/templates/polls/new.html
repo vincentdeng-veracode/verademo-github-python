@@ -1,0 +1,39 @@
+<div class="row">
+    <div class="col">
+        <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#newQModal">New Question</button>
+    </div>
+</div>
+
+<div class="modal fade" id="newQModal" tabindex="-1" role="dialog" aria-labelledby="newQModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <form action="{% url 'polls:new' %}" method="post">
+            {% csrf_token %}
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="newQModalLabel">New Question</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="{{ question_form.question_text.id_for_label }}">{{ question_form.question_text.label }}</label>
+                        {{ question_form.question_text }}
+                    </div>
+                    {{ choices_formset.management_form }}
+                    {% for form in choices_formset %}
+                        {{ form.id }}
+                        <div class="form-group">
+                            <label for="{{ form.choice_text.id_for_label }}">{{ form.choice_text.label }}</label>
+                            {{ form.choice_text }}
+                        </div>
+                    {% endfor %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Save Question</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>

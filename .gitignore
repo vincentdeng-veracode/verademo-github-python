@@ -1,0 +1,8 @@
+.*
+!.gitignore
+!.dockerignore
+!.gitlab-ci.yml
+
+__pycache__/
+
+db.sqlite3

@@ -1,0 +1,32 @@
+{% extends "polls/base.html" %}
+
+{% block content %}
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item active" aria-current="page">Polls</li>
+        </ol>
+    </nav>
+
+    <div class="row mb-3">
+        <div class="col">
+            {% if latest_question_list %}
+                <div class="list-group">
+                    {% for question in latest_question_list %}
+                        <a href="{% url 'polls:detail' question.id %}"
+                           class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                            <!-- This is an XSS issue as safe is not what you might think-->
+                            <span>{{ question.question_text | safe }}</span>
+                            <span class="badge badge-secondary">{{ question.vote_count }} votes</span>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="list-group">
+                    <div class="list-group-item">No polls are available.</div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% include "polls/new.html" %}
+{% endblock %}

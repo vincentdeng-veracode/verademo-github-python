@@ -1,0 +1,80 @@
+stages:
+    - test
+    - security
+
+unit_test:
+    image: python:3.6.6
+    stage: test
+    only:
+        - branches
+        - tags
+        - merge_requests
+    variables:
+        PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+    cache:
+        paths:
+            - .cache/pip
+            - venv/
+    before_script:
+        - apt update && apt install -y zip
+    script:
+        - pip install virtualenv
+        - virtualenv venv
+        - source venv/bin/activate
+        - pip install -r requirements.txt
+        - cd src
+        - python manage.py test
+    after_script:
+        - zip -r veracode.zip src/
+    artifacts:
+        paths:
+            - veracode.zip
+
+srcclr_scan:
+    image: python:3.6.6
+    stage: security
+    only:
+        - branches
+        - tags
+        - merge_requests
+    script: curl -sSL https://download.sourceclear.com/ci.sh | bash
+    allow_failure: true
+        
+veracode_static_policy:
+    image: ctcampbellcom/veracode-tools:centos
+    stage: security
+    only:
+        refs:
+            - master
+        variables:
+            - $VERACODE
+    script:
+        - java -jar /veracode/veracode-wrapper.jar -vid $VERACODE_ID -vkey $VERACODE_KEY
+          -action UploadAndScan -appname "$CI_PROJECT_NAME" -createprofile false
+          -filepath veracode.zip -version "commit $CI_COMMIT_SHORT_SHA pipeline $CI_PIPELINE_ID job $CI_JOB_ID"
+    allow_failure: true
+
+veracode_static_sandbox:
+    image: ctcampbellcom/veracode-tools:centos
+    stage: security
+    only:
+        variables:
+            - $VERACODE
+    except:
+        - master
+    script:
+        - java -jar /veracode/veracode-wrapper.jar -vid $VERACODE_ID -vkey $VERACODE_KEY
+          -action UploadAndScan -appname "$CI_PROJECT_NAME" -createprofile false
+          -sandboxname $CI_COMMIT_REF_NAME -createsandbox true
+          -filepath veracode.zip -version "commit $CI_COMMIT_SHORT_SHA pipeline $CI_PIPELINE_ID job $CI_JOB_ID"
+    allow_failure: true
+
+check_veracode_policy_status:
+    image: ctcampbellcom/veracode-tools:centos
+    stage: security
+    only:
+        - merge_requests
+    script:
+        - java -jar /veracode/veracode-wrapper.jar -vid $VERACODE_ID -vkey $VERACODE_KEY
+          -action passfail -appname "$CI_PROJECT_NAME" -sandboxname $CI_COMMIT_REF_NAME | ack --passthru '"Pass"'
+    allow_failure: true
