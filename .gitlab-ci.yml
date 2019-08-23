@@ -1,6 +1,7 @@
 stages:
     - test
     - security
+    - build
 
 unit_test:
     image: python:3.6.6
@@ -50,9 +51,8 @@ veracode_static_policy:
             - $VERACODE
     script:
         - java -jar /veracode/veracode-wrapper.jar -vid $VERACODE_ID -vkey $VERACODE_KEY
-          -action UploadAndScan -appname "$CI_PROJECT_NAME" -createprofile false
+          -action UploadAndScan -appname "$CI_PROJECT_NAME" -createprofile false -scantimeout 30
           -filepath veracode.zip -version "commit $CI_COMMIT_SHORT_SHA pipeline $CI_PIPELINE_ID job $CI_JOB_ID"
-    allow_failure: true
 
 veracode_static_sandbox:
     image: ctcampbellcom/veracode-tools:centos
@@ -78,3 +78,16 @@ check_veracode_policy_status:
         - java -jar /veracode/veracode-wrapper.jar -vid $VERACODE_ID -vkey $VERACODE_KEY
           -action passfail -appname "$CI_PROJECT_NAME" -sandboxname $CI_COMMIT_REF_NAME | ack --passthru '"Pass"'
     allow_failure: true
+    
+build-container:
+    image: docker:stable
+    stage: build
+    only:
+        - master
+    variables:
+        IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
+    before_script:
+        - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    script:
+        - docker build -t $IMAGE_TAG .
+        - docker push $IMAGE_TAG
