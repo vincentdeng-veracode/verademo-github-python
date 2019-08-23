@@ -4,8 +4,8 @@
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="{% url 'polls:index' %}">Polls</a></li>
-            <!-- This is an XSS issue as safe is not what you might think-->
-            <li class="breadcrumb-item active" aria-current="page">{{ question.question_text | safe }}</li>
+            <!-- This was an XSS issue as safe is not what you might think-->
+            <li class="breadcrumb-item active" aria-current="page">{{ question.question_text }}</li>
         </ol>
     </nav>
 
