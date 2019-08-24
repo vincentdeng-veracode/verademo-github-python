@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: verademo-python-__CI_ENVIRONMENT_SLUG__
+  labels:
+    app: verademo-python
+    ref: __CI_ENVIRONMENT_SLUG__
+spec:
+  type: LoadBalancer
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+  selector:
+    app: verademo-python
+    ref: __CI_ENVIRONMENT_SLUG__
