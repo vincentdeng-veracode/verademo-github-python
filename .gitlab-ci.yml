@@ -31,13 +31,14 @@ unit_test:
         paths:
             - veracode.zip
 
-srcclr_scan:
+srcclr_scan_master:
     image: python:3.6.6
     stage: security
+    only:
+        - master
     script: curl -sSL https://download.sourceclear.com/ci.sh | bash
-    allow_failure: false
         
-veracode_static_policy:
+veracode_static_master:
     image: ctcampbellcom/veracode-tools:centos
     stage: security
     only:
@@ -46,8 +47,18 @@ veracode_static_policy:
         - java -jar /veracode/veracode-wrapper.jar -vid $VERACODE_ID -vkey $VERACODE_KEY
           -action UploadAndScan -appname "$CI_PROJECT_NAME" -createprofile false -scantimeout 30
           -filepath veracode.zip -version "commit $CI_COMMIT_SHORT_SHA pipeline $CI_PIPELINE_ID job $CI_JOB_ID"
+          
+srcclr_scan_branches:
+    image: python:3.6.6
+    stage: security
+    only:
+        - branches
+    except:
+        - master
+    script: curl -sSL https://download.sourceclear.com/ci.sh | bash
+    allow_failure: true
 
-veracode_static_sandbox:
+veracode_static_branches:
     image: ctcampbellcom/veracode-tools:centos
     stage: security
     only:
