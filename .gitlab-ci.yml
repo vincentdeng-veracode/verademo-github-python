@@ -1,3 +1,6 @@
+variables:
+    IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
+
 stages:
     - test
     - security
@@ -6,10 +9,6 @@ stages:
 unit_test:
     image: python:3.6.6
     stage: test
-    only:
-        - branches
-        - tags
-        - merge_requests
     variables:
         PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
     cache:
@@ -34,19 +33,14 @@ unit_test:
 srcclr_scan:
     image: python:3.6.6
     stage: security
-    only:
-        - branches
-        - tags
-        - merge_requests
     script: curl -sSL https://download.sourceclear.com/ci.sh | bash
-    allow_failure: true
+    allow_failure: false
         
 veracode_static_policy:
     image: ctcampbellcom/veracode-tools:centos
     stage: security
     only:
-        refs:
-            - master
+        - master
     script:
         - java -jar /veracode/veracode-wrapper.jar -vid $VERACODE_ID -vkey $VERACODE_KEY
           -action UploadAndScan -appname "$CI_PROJECT_NAME" -createprofile false -scantimeout 30
@@ -56,8 +50,7 @@ veracode_static_sandbox:
     image: ctcampbellcom/veracode-tools:centos
     stage: security
     only:
-        variables:
-            - $VERACODE
+        - branches
     except:
         - master
     script:
@@ -76,16 +69,62 @@ check_veracode_policy_status:
         - java -jar /veracode/veracode-wrapper.jar -vid $VERACODE_ID -vkey $VERACODE_KEY
           -action passfail -appname "$CI_PROJECT_NAME" -sandboxname $CI_COMMIT_REF_NAME | ack --passthru '"Pass"'
     allow_failure: true
-    
+
 build-container:
     image: docker:stable
     stage: build
-    only:
-        - master
-    variables:
-        IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
     before_script:
         - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     script:
         - docker build -t $IMAGE_TAG .
         - docker push $IMAGE_TAG
+        
+deploy_review:
+    image:
+        name: lachlanevenson/k8s-kubectl:latest
+        entrypoint: ["/bin/sh", "-c"]
+    stage: review
+    only:
+        - branches
+    except:
+        - master
+    environment:
+        name: Review/$CI_BUILD_REF_NAME
+        url: http://$CI_ENVIRONMENT_SLUG.python.verademo.com
+        on_stop: stop_review
+    script:
+        - kubectl version
+        - cd manifests/
+        - sed -i "s~__IMAGE_TAG__~${IMAGE_TAG}~" deployment.yaml
+        - sed -i "s/__CI_ENVIRONMENT_SLUG__/${CI_ENVIRONMENT_SLUG}/" deployment.yaml ingress.yaml service.yaml
+        - sed -i "s/__VERSION__/${CI_COMMIT_REF_NAME}/" deployment.yaml ingress.yaml service.yaml
+        - if kubectl apply -f deployment.yaml | grep -q unchanged; then
+              echo "=> Patching deployment to force image update."
+              kubectl patch -f deployment.yaml -p "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"ci-last-updated\":\"$(date +'%s')\"}}}}}"
+          else
+              echo "=> Deployment apply has changed the object, no need to force image update."
+          fi
+        - kubectl apply -f service.yaml || true
+        - kubectl apply -f ingress.yaml
+        - kubectl rollout status -f deployment.yaml
+        - kubectl get deploy,svc,ing,pod -l app="$(echo ${CI_PROJECT_NAME} | tr "." "-")",ref="${CI_ENVIRONMENT_SLUG}"
+
+stop_review:
+    image:
+        name: lachlanevenson/k8s-kubectl:latest
+        entrypoint: ["/bin/sh", "-c"]
+    stage: review
+    variables:
+        GIT_STRATEGY: none
+    when: manual
+    only:
+        - branches
+    except:
+        - master
+    environment:
+        name: Review/$CI_BUILD_REF_NAME
+        action: stop
+    script:
+        - kubectl version
+        - kubectl delete ing -l ref=${CI_ENVIRONMENT_SLUG}
+        - kubectl delete all -l ref=${CI_ENVIRONMENT_SLUG}
