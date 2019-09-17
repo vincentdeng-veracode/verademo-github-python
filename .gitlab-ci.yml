@@ -56,6 +56,8 @@ daily-sast-scan-master:
 build-container:
     image: docker:stable
     stage: build
+    except:
+        - schedules
     services:
         - name: docker:dind
           entrypoint: ["env", "-u", "DOCKER_HOST"]
@@ -80,6 +82,7 @@ deploy-review:
         - branches
     except:
         - master
+        - schedules
     environment:
         name: review/$CI_BUILD_REF_NAME
         url: http://$CI_ENVIRONMENT_SLUG.python.verademo.com
@@ -112,6 +115,7 @@ stop-review:
         - branches
     except:
         - master
+        - schedules
     environment:
         name: review/$CI_BUILD_REF_NAME
         action: stop
