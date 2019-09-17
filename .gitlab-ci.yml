@@ -8,6 +8,7 @@ stages:
 variables:
     IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
     PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+    PIPENV_CACHE_DIR: $CI_PROJECT_DIR/.cache/pipenv
     
 include:
     - project: 'verademo/security-ci-includes'
@@ -21,22 +22,25 @@ image: python:3.6.6
 
 cache:
     paths:
-        - .cache/pip
-        - venv/
+        - $PIP_CACHE_DIR
+        - $PIPENV_CACHE_DIR
+
+.prep-venv: &prep-venv
+    before_script:
+        - pip install pipenv
+        - pipenv sync --dev
 
 unit-test:
     stage: test
+    <<: *prep-venv
     script:
-        - pip install virtualenv
-        - virtualenv venv
-        - source venv/bin/activate
-        - pip install -r requirements.txt
         - cd src
-        - python manage.py test
+        - pipenv run python manage.py test
 
 sca-scan:
     stage: security
     extends: .sca-scan
+    <<: *prep-venv
         
 daily-sast-scan-master:
     stage: security
