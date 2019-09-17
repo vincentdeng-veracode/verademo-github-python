@@ -11,6 +11,8 @@ variables:
     PIPENV_CACHE_DIR: $CI_PROJECT_DIR/.cache/pipenv
     # https://gitlab.com/gitlab-com/support-forum/issues/4416
     DOCKER_TLS_CERTDIR: ""
+    DOCKER_HOST: tcp://docker:2375/
+    DOCKER_DRIVER: overlay2
     
 include:
     - project: 'verademo/security-ci-includes'
@@ -56,6 +58,10 @@ daily-sast-scan-master:
             - master
 
 build-container:
+    services:
+        - name: docker:dind
+          entrypoint: ["env", "-u", "DOCKER_HOST"]
+          command: ["dockerd-entrypoint.sh"]
     image: docker:stable
     stage: build
     before_script:
