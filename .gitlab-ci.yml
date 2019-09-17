@@ -1,25 +1,31 @@
-variables:
-    IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
-
 stages:
     - test
-    - master-security
+    - security
     - build
     - deploy
-    - branch-security
     - teardown
+    
+variables:
+    IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
+    PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+    
+include:
+    - project: 'verademo/security-ci-includes'
+      ref: master
+      file: '/sast-scan.yml'
+    - project: 'verademo/security-ci-includes'
+      ref: master
+      file: '/sca-scan.yml'
+
+image: python:3.6.6
+
+cache:
+    paths:
+        - .cache/pip
+        - venv/
 
 unit_test:
-    image: python:3.6.6
     stage: test
-    variables:
-        PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
-    cache:
-        paths:
-            - .cache/pip
-            - venv/
-    before_script:
-        - apt update && apt install -y zip
     script:
         - pip install virtualenv
         - virtualenv venv
@@ -27,30 +33,23 @@ unit_test:
         - pip install -r requirements.txt
         - cd src
         - python manage.py test
-    after_script:
-        - zip -r veracode.zip src/
-    artifacts:
-        paths:
-            - veracode.zip
 
-srcclr_scan_master:
-    image: python:3.6.6
-    stage: master-security
-    only:
-        - master
-    script: curl -sSL https://download.sourceclear.com/ci.sh | bash
+sca-scan:
+    stage: security
+    extends: .sca-scan
         
-veracode_static_master:
-    image: ctcampbellcom/veracode-tools:centos
-    stage: master-security
+daily-sast-scan-master:
+    stage: security
+    extends: .sast-policy-scan
+    variables:
+        - VERACODE_FILEPATH: 'src/'
     only:
-        - master
-    script:
-        - java -jar /veracode/veracode-wrapper.jar -vid $VERACODE_ID -vkey $VERACODE_KEY
-          -action UploadAndScan -appname "$CI_PROJECT_NAME" -createprofile false -scantimeout 30
-          -filepath veracode.zip -version "commit $CI_COMMIT_SHORT_SHA pipeline $CI_PIPELINE_ID job $CI_JOB_ID"
+        variables:
+            - $VERACODE_DAILY_SAST == "true"
+        refs:
+            - master
 
-build_container:
+build-container:
     image: docker:stable
     stage: build
     before_script:
@@ -59,7 +58,7 @@ build_container:
         - docker build -t $IMAGE_TAG .
         - docker push $IMAGE_TAG
         
-deploy_review:
+deploy-review:
     image:
         name: lachlanevenson/k8s-kubectl:latest
         entrypoint: ["/bin/sh", "-c"]
@@ -88,31 +87,7 @@ deploy_review:
         - kubectl rollout status -f deployment.yaml
         - kubectl get deploy,svc,pod -l app="$(echo ${CI_PROJECT_NAME} | tr "." "-")",ref="${CI_ENVIRONMENT_SLUG}"
 
-srcclr_scan_branches:
-    image: python:3.6.6
-    stage: branch-security
-    only:
-        - branches
-    except:
-        - master
-    script: curl -sSL https://download.sourceclear.com/ci.sh | bash
-    allow_failure: true
-
-veracode_static_branches:
-    image: ctcampbellcom/veracode-tools:centos
-    stage: branch-security
-    only:
-        - branches
-    except:
-        - master
-    script:
-        - java -jar /veracode/veracode-wrapper.jar -vid $VERACODE_ID -vkey $VERACODE_KEY
-          -action UploadAndScan -appname "$CI_PROJECT_NAME" -createprofile false
-          -sandboxname $CI_COMMIT_REF_NAME -createsandbox true
-          -filepath veracode.zip -version "commit $CI_COMMIT_SHORT_SHA pipeline $CI_PIPELINE_ID job $CI_JOB_ID"
-    allow_failure: true
-
-stop_review:
+stop-review:
     image:
         name: lachlanevenson/k8s-kubectl:latest
         entrypoint: ["/bin/sh", "-c"]
