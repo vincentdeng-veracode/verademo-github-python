@@ -1,6 +1,5 @@
 stages:
     - test
-    - security
     - build
     - deploy
     - teardown
@@ -41,9 +40,10 @@ sca-scan:
     stage: test
     extends: .sca-scan
     <<: *prep-venv
+    allow_failure: true
         
 daily-sast-scan-master:
-    stage: security
+    stage: test
     extends: .sast-policy-scan
     variables:
         VERACODE_FILEPATH: 'src/'
@@ -52,6 +52,7 @@ daily-sast-scan-master:
             - $VERACODE_DAILY_SAST == "true"
         refs:
             - master
+    allow_failure: true
 
 build-container:
     image: docker:stable
