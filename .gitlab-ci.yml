@@ -9,6 +9,8 @@ variables:
     IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
     PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
     PIPENV_CACHE_DIR: $CI_PROJECT_DIR/.cache/pipenv
+    # https://gitlab.com/gitlab-com/support-forum/issues/4416
+    DOCKER_TLS_CERTDIR: ""
     
 include:
     - project: 'verademo/security-ci-includes'
