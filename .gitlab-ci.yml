@@ -40,7 +40,7 @@ unit-test:
         - pipenv run python manage.py test
 
 sca-scan:
-    stage: security
+    stage: test
     extends: .sca-scan
     <<: *prep-venv
         
