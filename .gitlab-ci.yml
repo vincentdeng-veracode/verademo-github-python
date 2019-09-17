@@ -24,7 +24,7 @@ cache:
         - .cache/pip
         - venv/
 
-unit_test:
+unit-test:
     stage: test
     script:
         - pip install virtualenv
