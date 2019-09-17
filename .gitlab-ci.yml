@@ -70,7 +70,7 @@ deploy-review:
     environment:
         name: review/$CI_BUILD_REF_NAME
         url: http://$CI_ENVIRONMENT_SLUG.python.verademo.com
-        on_stop: stop_review
+        on_stop: stop-review
     script:
         - kubectl version
         - cd manifests/
