@@ -42,7 +42,7 @@ daily-sast-scan-master:
     stage: security
     extends: .sast-policy-scan
     variables:
-        - VERACODE_FILEPATH: 'src/'
+        VERACODE_FILEPATH: 'src/'
     only:
         variables:
             - $VERACODE_DAILY_SAST == "true"
