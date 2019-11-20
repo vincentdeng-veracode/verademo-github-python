@@ -43,7 +43,6 @@ sca-scan:
     before_script:
         - pip install pipenv
         - pipenv --two sync --dev
-    <<: *prep-venv
     allow_failure: true
         
 daily-sast-scan-master:
