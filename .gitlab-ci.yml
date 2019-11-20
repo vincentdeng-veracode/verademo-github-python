@@ -40,9 +40,9 @@ sca-scan:
     stage: test
     extends: .sca-scan
     image: python:2.7.17
-    before_script:
-        - pip install pipenv
-        - pipenv --two sync --dev
+    # before_script:
+    #     - pip install pipenv
+    #     - pipenv --two sync --dev
     allow_failure: true
         
 daily-sast-scan-master:
