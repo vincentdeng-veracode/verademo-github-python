@@ -1,5 +1,6 @@
 stages:
     - test
+    - security
     - build
     - deploy
     - teardown
@@ -37,7 +38,7 @@ unit-test:
         - pipenv run python manage.py test
 
 sca-scan:
-    stage: test
+    stage: security
     extends: .sca-scan
     <<: *prep-venv
     allow_failure: true
