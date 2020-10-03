@@ -41,18 +41,29 @@ sca-scan:
     extends: .sca-scan
     <<: *prep-venv
     allow_failure: true
-        
-daily-sast-scan-master:
-    stage: test
-    extends: .sast-policy-scan
+
+.sast=prep: &sast-prep
+    before_script:
+        - apt update -qq && apt install -qq -y zip
+        - zip -r veracode.zip src/
+
+sast-pipeline-scan:
+    stage: security
+    extends: .sast-pipeline-scan
+    except:
+        - master
+    <<: *sast-prep
     variables:
-        VERACODE_FILEPATH: 'src/'
+        VERACODE_FILEPATH: 'veracode.zip'
+    
+sast-policy-scan:
+    stage: security
+    extends: .sast-policy-scan
     only:
-        variables:
-            - $VERACODE_DAILY_SAST == "true"
-        refs:
-            - master
-    allow_failure: true
+        - master
+    <<: *sast-prep
+    variables:
+        VERACODE_FILEPATH: 'veracode.zip'
 
 build-container:
     image: docker:stable
