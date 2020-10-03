@@ -42,7 +42,7 @@ sca-scan:
     <<: *prep-venv
     allow_failure: true
 
-.sast=prep: &sast-prep
+.sast-prep: &sast-prep
     before_script:
         - apt update -qq && apt install -qq -y zip
         - zip -r veracode.zip src/
