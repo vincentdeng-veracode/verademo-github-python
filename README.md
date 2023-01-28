@@ -6,3 +6,4 @@ Contains XSS, see if you can find it!
 
 Also contains vulnerable OSS components.
 awfe
+awef
